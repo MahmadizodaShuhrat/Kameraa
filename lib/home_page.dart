@@ -1,3 +1,4 @@
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -13,26 +14,36 @@ class _CameraPageState extends State<CameraPage> {
   VlcPlayerController? _vlcController;
 
   Future<void> requestPermissions() async {
-    bool cameraGranted = false;
+    final statuses = await [
+      Permission.camera,
+      Permission.storage,
+    ].request();
 
-    do {
-      var status = await [
-        Permission.camera,
-        Permission.storage,
-      ].request();
+    final cameraPermissionGranted = statuses[Permission.camera]?.isGranted ?? false;
+    if (!cameraPermissionGranted) {
+      print('Иҷозати камера рад шуд! Лутфан иҷоза диҳед.');
+      await openAppSettings();
+    }
 
-      cameraGranted = status[Permission.camera]?.isGranted ?? false;
+    final plugin = DeviceInfoPlugin();
+    final androidInfo = await plugin.androidInfo;
+    final sdkInt = androidInfo.version.sdkInt;
 
-      if (!cameraGranted) {
-        print('Иҷозати камера рад шуд! Лутфан иҷоза диҳед.');
+    if (sdkInt < 33) {
+      final storageStatus = await Permission.storage.request();
+
+      if (storageStatus.isDenied) {
+        await openAppSettings();
       }
+    } else {
+      print("Android version higher then 33 is granted by default");
+    }
 
-      if (status[Permission.storage]?.isDenied ?? true) {
-        print('Иҷозати хос рад шуд! Лутфан иҷоза диҳед.');
-      }
-    } while (!cameraGranted);
+    final storagePermissionGranted = statuses[Permission.storage]?.isGranted ?? false;
 
-    print('Иҷозати камера дода шуд!');
+    if (!storagePermissionGranted && sdkInt < 33) {
+      print('Иҷозати хос рад шуд! Лутфан иҷоза диҳед.');
+    }
   }
 
   @override
