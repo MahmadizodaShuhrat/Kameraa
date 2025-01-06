@@ -6,40 +6,54 @@ class CameraPage extends StatefulWidget {
   const CameraPage({super.key});
 
   @override
-  _CameraPageState createState() => _CameraPageState();
+  State<CameraPage> createState() => _CameraPageState();
 }
 
 class _CameraPageState extends State<CameraPage> {
-  late VlcPlayerController _vlcController;
+  VlcPlayerController? _vlcController;
 
   Future<void> requestPermissions() async {
-    var status = await [
-      Permission.camera,
-      Permission.storage,
-    ].request();
+    bool cameraGranted = false;
 
-    if (status[Permission.camera]?.isDenied ?? true) {
-      print('Иҷозати камера рад шуд!');
-    }
-    if (status[Permission.storage]?.isDenied ?? true) {
-      print('Иҷозати хос дархост шуд!');
-    }
+    do {
+      var status = await [
+        Permission.camera,
+        Permission.storage,
+      ].request();
+
+      cameraGranted = status[Permission.camera]?.isGranted ?? false;
+
+      if (!cameraGranted) {
+        print('Иҷозати камера рад шуд! Лутфан иҷоза диҳед.');
+      }
+
+      if (status[Permission.storage]?.isDenied ?? true) {
+        print('Иҷозати хос рад шуд! Лутфан иҷоза диҳед.');
+      }
+    } while (!cameraGranted);
+
+    print('Иҷозати камера дода шуд!');
   }
 
   @override
   void initState() {
     super.initState();
-    requestPermissions(); 
+    _emitPermissionRequest();
+  }
+
+  void _emitPermissionRequest() async {
+    await requestPermissions();
     _vlcController = VlcPlayerController.network(
       'rtsp://admin:Dushanbe_2024@95.142.89.10:5050',
       hwAcc: HwAcc.full,
       autoPlay: true,
     );
+    setState(() {});
   }
 
   @override
   void dispose() {
-    _vlcController.dispose();
+    _vlcController?.dispose();
     super.dispose();
   }
 
@@ -49,13 +63,15 @@ class _CameraPageState extends State<CameraPage> {
       appBar: AppBar(
         title: Text('Просмотр камеры'),
       ),
-      body: Center(
-        child: VlcPlayer(
-          controller: _vlcController,
-          aspectRatio: 16 / 9,
-          placeholder: Center(child: CircularProgressIndicator()),
-        ),
-      ),
+      body: _vlcController == null
+          ? Center(child: CircularProgressIndicator())
+          : Center(
+              child: VlcPlayer(
+                controller: _vlcController!,
+                aspectRatio: 16 / 9,
+                placeholder: Center(child: CircularProgressIndicator()),
+              ),
+            ),
     );
   }
 }
